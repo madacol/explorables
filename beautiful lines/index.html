@@ -1,0 +1,185 @@
+<head>
+    <style>
+        #canvas {
+            background: rgb(20, 20, 20);
+        }
+
+        body {
+            background: rgb(30, 30, 30);
+            margin: 0;
+        }
+    </style>
+
+    <script src="https://labs.minutelabs.io/toolkit/js/vector.js"></script>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        const zoom = 2
+        const width = zoom * document.body.offsetWidth - 80
+        const height = width
+        const canvas = document.getElementById('canvas')
+        const ctx = canvas.getContext('2d')
+        canvas.width = width
+        canvas.height = height
+        canvas.style.transform = `scale(${1/zoom})`
+        canvas.style.transformOrigin = 'top left'
+
+        const middle = V(width / 2, height / 2)
+        const agents = []
+
+        function drawCircle(x, y, r, color) {
+            ctx.fillStyle = color
+            ctx.beginPath()
+            ctx.arc(x, y, r, 0, 2 * Math.PI)
+            ctx.fill()
+        }
+
+        function createAgent(size, color) {
+            let agent = {
+                radius: size,
+                position: V(300, 200),
+                velocity: V(0.3, 0.4),
+                color: color,
+                move(dt) {
+                    agent.position.add(agent.velocity.times(dt))
+                    agent.checkEdgeBounce()
+                },
+                draw() {
+                    // drawCircle(agent.position.x, agent.position.y, agent.radius, agent.color)
+                },
+                checkEdgeBounce() {
+                    if (agent.position.y >= height - agent.radius) {
+                        agent.velocity.y = -Math.abs(agent.velocity.y)
+                        // agent.position.y = height - agent.radius
+                    }
+                    if (agent.position.x >= width - agent.radius) {
+                        // right wall
+                        agent.velocity.x = -Math.abs(agent.velocity.x)
+                        // agent.position.x = width - agent.radius
+                    }
+                    if (agent.position.y <= agent.radius) {
+                        agent.velocity.y = Math.abs(agent.velocity.y)
+                        // agent.position.y = agent.radius
+                    }
+                    if (agent.position.x <= agent.radius) {
+                        // left wall
+                        agent.velocity.x = Math.abs(agent.velocity.x)
+                        // agent.position.x = agent.radius
+                    }
+                }
+            }
+
+            return agent
+        }
+
+        function clearCanvas() {
+            // ctx.clearRect(0, 0, width, height)
+        }
+
+        function moveAgents(dt) {
+            for (let agent of agents) {
+                agent.move(dt)
+            }
+        }
+
+        const maxDistance = 500
+        const minDistance = 30
+
+        function rescale(min, max, v) {
+            return (v - min) / (max - min)
+        }
+
+        function drawLine(p1, p2, color) {
+            ctx.strokeStyle = color
+            ctx.lineWidth = 2
+            ctx.beginPath()
+            ctx.moveTo(p1.x, p1.y)
+            ctx.lineTo(p2.x, p2.y)
+            ctx.stroke()
+        }
+
+        function drawConnection(agent1, agent2) {
+            let displacement = agent2.position.minus(agent1.position)
+            let distance = displacement.norm()
+
+            let alpha = rescale(maxDistance, minDistance, distance)
+
+            let color = `hsla(180, 90%, 60%, ${alpha})`
+            drawLine(agent2.position, agent1.position, color)
+            if (distance >= maxDistance) {
+                return
+            } else if (distance < minDistance) {
+                const velocityDifference = agent1.velocity.minus(agent2.velocity)
+                const nudge = velocityDifference.multiply(0.002)
+                agent1.velocity.subtract(nudge)
+                agent2.velocity.add(nudge)
+                return
+            }
+            // k * x
+            // k / (x * x)
+            let nudge = displacement.normalize().multiply(-10 / (distance * distance))
+            agent2.velocity.add(nudge)
+            agent1.velocity.subtract(nudge)
+        }
+
+        function drawConnections() {
+            let length = agents.length
+            for (let i = 0; i < length; i++) {
+                let agent1 = agents[i]
+                for (let j = i + 1; j < length; j++) {
+                    let agent2 = agents[j]
+
+                    drawConnection(agent1, agent2)
+                }
+            }
+        }
+
+        function draw() {
+            clearCanvas()
+
+            drawConnections()
+
+            for (let agent of agents) {
+                agent.draw()
+            }
+        }
+
+        function frame(dt) {
+            moveAgents(dt)
+            draw()
+        }
+
+        let previousTime = performance.now()
+
+        function animate() {
+            let now = performance.now()
+            let dt = now - previousTime
+            previousTime = now
+            requestAnimationFrame(animate)
+            frame(dt)
+        }
+
+
+        function lerp(min, max, v) {
+            return (max - min) * v + min
+        }
+
+        function createAgents(n) {
+            for (let i = 0; i < n; i++) {
+                let agent = createAgent(8, 'red')
+                agent.position.randomize(Math.sqrt(lerp(0, width / 2, Math.random())*width/2)).add(middle)
+                agent.velocity.randomize(lerp(0.05, 0.2, Math.random()))
+                agents.push(agent)
+            }
+        }
+
+        function setup() {
+            createAgents(3)
+        }
+
+        setup()
+        animate()
+    </script>
+</body>
