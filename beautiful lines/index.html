@@ -125,15 +125,11 @@
         }
 
         function drawConnections() {
-            let length = agents.length
-            for (let i = 0; i < length; i++) {
-                let agent1 = agents[i]
-                for (let j = i + 1; j < length; j++) {
-                    let agent2 = agents[j]
-
+            agents.forEach((agent1, i) => {
+                agents.slice(i + 1).forEach(agent2 => {
                     drawConnection(agent1, agent2)
-                }
-            }
+                })
+            })
         }
 
         function draw() {
