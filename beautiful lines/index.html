@@ -17,7 +17,7 @@
     <canvas id="canvas"></canvas>
     <script>
         const zoom = 2
-        const width = zoom * document.body.offsetWidth - 80
+        const width = zoom * Math.min(window.innerWidth, window.innerHeight) - 80
         const height = width
         const canvas = document.getElementById('canvas')
         const ctx = canvas.getContext('2d')
@@ -84,8 +84,8 @@
             }
         }
 
-        const maxDistance = 500
-        const minDistance = 30
+        const maxDistance = width * 0.4
+        const minDistance = width * 0.01
 
         function rescale(min, max, v) {
             return (v - min) / (max - min)
